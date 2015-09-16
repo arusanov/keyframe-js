@@ -4,6 +4,10 @@ The goal is to ease the creation of keyframes in cases where a property's value 
 In addition, Keyframe can determine whether a given css property need to have a vendor prefix,
 taking away some cross-browser dependent code.
 
+## Install
+
+`bower install keyframe-js`
+
 ## Usage
 
 Creating keyframe:
