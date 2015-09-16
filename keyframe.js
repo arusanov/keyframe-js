@@ -305,20 +305,20 @@
   }
 
   Transition.prototype.to = function (to, opts, endCallback, cancelCallback) {
-    opts = options(opts, this.opts);
     if (typeof opts === 'function') {
       cancelCallback = endCallback;
       endCallback = opts;
       opts = null;
     }
+    opts = options(opts, this.opts);
     if (this.current && this.current.cancel) {
       this.current.cancel(to, opts);
     }
     this.queue.length = 0;
     this.then(to, opts, endCallback, cancelCallback);
     this.current = this.queue.shift();
-    this.current();
     this.node.offsetHeight;
+    this.current();
     return this;
   };
 
