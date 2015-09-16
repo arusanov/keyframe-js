@@ -1,8 +1,20 @@
 {
   "name": "keyframe-js",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Javascript controlled CSS animations and transitions",
+  "keywords": [
+    "animations",
+    "transitions",
+    "css"
+  ],
   "authors": [
     "arusanov <alexander.rusanov@gmail.com>"
+  ],
+  "main": "keyframe.js",
+  "moduleType": [
+    "amd",
+    "globals",
+    "node"
   ],
   "license": "MIT",
   "ignore": [
