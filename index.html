@@ -46,23 +46,23 @@
 
 <pre><code>//Create a keyframe (can be used later)
   var keyframes = Keyframe.keyframe({
-  from: {
-  top: 100,
-  left: 100,
-  background: 'yellow'
-  },
-  50: {
-  top: 200,
-  left: 200,
-  background: 'green',
-  transform: 'scale(0.5,0.5)'
-  },
-  to: {
-  top: 300,
-  left: 300,
-  background: 'blue',
-  transform: 'scale(1.5,1.5)'
-  }
+    from: {
+      top: 100,
+      left: 100,
+      background: 'yellow'
+    },
+    50: {
+      top: 200,
+      left: 200,
+      background: 'green',
+      transform: 'scale(0.5,0.5)'
+    },
+    to: {
+      top: 300,
+      left: 300,
+      background: 'blue',
+      transform: 'scale(1.5,1.5)'
+    }
   })
 </code></pre>
 
@@ -76,8 +76,8 @@
   it returns animation object with start() method
   */
   var animation = keyframes.animate(document.getElementById('element'), {
-  duration: 100,
-  iterationCount: 3
+    duration: 100,
+    iterationCount: 3
   });
 
   /*
@@ -86,7 +86,7 @@
   (endCallback, startCallback, iterationCallback)
   it returns animation object with 3 methods for animation flow control
   */
-  var animationControls = animation.start();
+  var animationControls = animation.start(endCallback, startCallback, iterationCallback);
 
   /* Animation control can pause, resume and stop running animation */
   animationControls.pause();
@@ -105,29 +105,29 @@
   */
   var transition = Keyframe.transition(node,
   {
-  duration: 100
+    duration: 100
   })
   .to({
-  left: 100,
-  top: 100,
-  width: 200,
-  height: 200,
-  background: 'red'
-  },function onend() {
-  //Called when step ended
-  }, function oncancel() {
-  //Called when step canceled
+    left: 100,
+    top: 100,
+    width: 200,
+    height: 200,
+    background: 'red'
+  }, function onEnd() {
+    //Called when step ended
+  }, function onCancel() {
+    //Called when step canceled
   })
   .then({ //Starts transition when previous completed
-  left: 100,
-  top: 100,
-  width: 200,
-  height: 200,
-  background: 'red'
-  },function onend() {
-  //Called when step ended
-  }, function oncancel() {
-  //Called when step canceled
+    left: 100,
+    top: 100,
+    width: 200,
+    height: 200,
+    background: 'red'
+    },function onEnd() {
+      //Called when step ended
+    }, function onCancel() {
+      //Called when step canceled
   });
 </code></pre>
 
