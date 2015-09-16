@@ -243,3 +243,25 @@ a {
 @media screen and (max-width: 42em) {
   .site-footer {
     font-size: 0.9rem; } }
+
+.example {
+    margin: 2rem auto;
+    display: table;
+}
+
+.example .half {
+    display: table-cell;
+    position: relative;
+    width: 200px;
+    height: 200px;
+}
+.transition-ball, .animation-ball {
+    position: absolute;
+    top:50%;
+    left:50%;
+    width: 32px;
+    height: 32px;
+    border-radius: 100%;
+    background: rgb(0, 0, 136);
+    margin: -16px 0 0 -16px;
+}
