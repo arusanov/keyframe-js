@@ -22,6 +22,7 @@
     setTransitionValue = setValue(transitionString),
     styleNode = document.createElement('style'),
     keyframeId = 0,
+    isSupported = !!animationProperty,
     requestAnimFrame = (function () {
       return window.requestAnimationFrame ||
         window.webkitRequestAnimationFrame ||
@@ -29,7 +30,13 @@
         function (callback) {
           window.setTimeout(callback, 0);
         };
-    }());
+    }()),
+    indexOf = [].indexOf || function (item) {
+        for (var i = 0, l = this.length; i < l; i++) {
+          if (i in this && this[i] === item) return i;
+        }
+        return -1;
+      };
 
   function capitalize(word) {
     return word[0].toUpperCase() + word.substr(1);
@@ -93,8 +100,32 @@
       if (typeof value === 'number') {
         value = convertDefaultNumberValue(key, value);
       }
-      domNode.style[getPrefixedProperty(domNode, name + capitalize(key))] = value;
+      domNode.style[getPrefixedProperty(domNode, name + capitalize(key))] = value || '';
     };
+  }
+
+  function getTransitionProperties(to) {
+    var transitionProperties = [];
+    //Fill in props
+    for (var prop in to) {
+      if (to.hasOwnProperty(prop)) {
+        transitionProperties.push(toCssName(getPrefixedProperty(testNode, prop)));
+      }
+    }
+    return transitionProperties;
+  }
+
+  function options(opts, defaults) {
+    if (!opts) {
+      opts = defaults;
+    } else {
+      for (var k in defaults) {
+        if (defaults.hasOwnProperty(k) && !opts.hasOwnProperty(k)) {
+          opts[k] = defaults[k];
+        }
+      }
+    }
+    return opts;
   }
 
   function on(node, type, evt, handler) {
@@ -108,8 +139,8 @@
 
   function Keyframes(keyframes) {
     var css, key, prop;
-    if (!Keyframes.isSupported) {
-      throw new Error('not supported');
+    if (!isSupported) {
+      throw new Error('animations not supported');
     }
     this.keyframeId = ++keyframeId;
     css = '@' + (prefix ? ('-' + prefix + '-') : '') + 'keyframes keyframejs' + this.keyframeId + '{';
@@ -133,8 +164,6 @@
     this.style = document.createTextNode(css);
     styleNode.appendChild(this.style);
   }
-
-  Keyframes.isSupported = !!animationProperty;
 
   Keyframes.prototype.remove = function () {
     styleNode.removeChild(this.style);
@@ -196,112 +225,125 @@
   };
 
 
-  function Transition(domNode, opts) {
-    //Chaining
-    this.node = domNode;
-    this.opts = opts || {};
-    this.states = [];
-    this.inTransition = false;
-  }
+  function createTransition(node, to, opts, endCallback, cancelCallback) {
+    var initialOpts = opts,
+      transition;
 
-  Transition.isSupported = !!transitionProperty;
-
-  Transition.prototype.to = function (to, opts, endCallback, startCallback) {
-    var self = this, k, transition, setTo = function () {
+    function setTo(to) {
       for (var prop in to) {
         if (to.hasOwnProperty(prop)) {
-          if (to.hasOwnProperty(prop)) {
-            self.node.style[getPrefixedProperty(self.node, prop)] = toCssValue(to[prop]);
-          }
-        }
-      }
-    };
-
-    if (typeof opts === 'function') {
-      endCallback = opts;
-      startCallback = endCallback;
-      opts = null;
-    }
-    if (!opts) {
-      opts = self.opts;
-    } else {
-      for (k in self.opts) {
-        if (self.opts.hasOwnProperty(k) && !opts.hasOwnProperty(k)) {
-          opts[k] = self.opts[k];
+          node.style[getPrefixedProperty(node, prop)] = toCssValue(to[prop]);
         }
       }
     }
 
-    if (!Transition.isSupported) {
+    function setTransition(to, opts) {
+      setTransitionValue(node, 'property', getTransitionProperties(to).join(','));
+      for (var key in opts) {
+        if (opts.hasOwnProperty(key)) {
+          setTransitionValue(node, key, opts[key]);
+        }
+      }
+    }
+
+    if (!transitionProperty) {
       transition = function () {
-        setTo();
-        if (typeof startCallback === 'function') {
-          startCallback();
-        }
-        self.node.offsetHeight;
+        setTo(to);
         if (typeof endCallback === 'function') {
           endCallback();
         }
       };
     } else {
       transition = function () {
-        var prop, key, transitionProperty = [];
+        var transitionProperties = getTransitionProperties(to);
 
-        //Fill in props
-        for (prop in to) {
-          if (to.hasOwnProperty(prop)) {
-            transitionProperty.push(toCssName(getPrefixedProperty(self.node, prop)));
-          }
-        }
-        transitionProperty = transitionProperty.join(',');
-        //Fill in transition
-        setTransitionValue(self.node, 'property', transitionProperty);
-        for (key in opts) {
-          if (opts.hasOwnProperty(key)) {
-            setTransitionValue(self.node, key, opts[key]);
-          }
-        }
-        setTo();
-        on(self.node, transitionString, 'start',startCallback);
-        on(self.node, transitionString, 'end', function handler(e) {
-          if (e.target === self.node && e.propertyName && transitionProperty.indexOf(e.propertyName) !== -1) {
-            off(self.node, transitionString, 'end', handler);
-            off(self.node, transitionString, 'start',startCallback);
-            //Remove style
-            setTransitionValue(self.node, 'property', '');
-            for (key in opts) {
-              if (opts.hasOwnProperty(key)) {
-                setTransitionValue(self.node, key, '');
-              }
+        function handler(e) {
+          if (e.target === node && e.propertyName && indexOf.call(transitionProperties, e.propertyName) !== -1) {
+            if (transition.cancel) {
+              transition.cancel();
             }
             if (typeof endCallback === 'function') {
               endCallback.apply(this, arguments);
             }
+          }
+        }
 
-            //Go next
-            self.node.offsetHeight;
-            var next = self.states.shift();
-            if (next) {
-              requestAnimFrame(next);
-            } else {
-              self.inTransition = false;
+        transition.cancel = function (to, opts) {
+          transition.cancel = null;
+          off(node, transitionString, 'end', handler);
+          var toProperties = getTransitionProperties(to), newProperties = [];
+          for (var i = 0; i < transitionProperties.length; i++) {
+            if (indexOf.call(toProperties, transitionProperties[i]) !== -1) {
+              newProperties.push(transitionProperties[i]);
             }
           }
-        });
-        self.inTransition = true;
-        self.node.offsetHeight;
+          setTransitionValue(node, 'property', newProperties.join(','));
+          for (var opt in initialOpts) {
+            if (initialOpts.hasOwnProperty(opt)) {
+              setTransitionValue(node, opt, opts ? opts[opt] : '');
+            }
+          }
+          if (typeof cancelCallback === 'function' && to && opts) {
+            //replacement of transition
+            cancelCallback.apply(this, arguments);
+          }
+        };
+
+        setTransition(to, opts);
+        setTo(to);
+        on(node, transitionString, 'end', handler);
       };
     }
-    if (!this.inTransition) {
-      transition();
-    } else {
-      this.states.push(transition);
+    return transition;
+  }
+
+  function Transition(domNode, opts) {
+    this.node = domNode;
+    this.opts = opts || {};
+    this.queue = [];
+    this.current = null;
+  }
+
+  Transition.prototype.to = function (to, opts, endCallback, cancelCallback) {
+    opts = options(opts, this.opts);
+    if (typeof opts === 'function') {
+      cancelCallback = endCallback;
+      endCallback = opts;
+      opts = null;
     }
+    if (this.current && this.current.cancel) {
+      this.current.cancel(to, opts);
+    }
+    this.queue.length = 0;
+    this.then(to, opts, endCallback, cancelCallback);
+    this.current = this.queue.shift();
+    this.current();
+    this.node.offsetHeight;
+    return this;
+  };
+
+  Transition.prototype.then = function (to, opts, endCallback, cancelCallback) {
+    var self = this;
+    if (typeof opts === 'function') {
+      cancelCallback = endCallback;
+      endCallback = opts;
+      opts = null;
+    }
+    opts = options(opts, this.opts);
+    this.queue.push(createTransition(this.node, to, opts, function () {
+      self.current = self.queue.shift();
+      if (self.current) {
+        requestAnimFrame(self.current);
+      }
+      if (typeof endCallback === 'function') {
+        endCallback.apply(this, arguments);
+      }
+    }, cancelCallback));
     return this;
   };
 
   return {
-    isSupported: Transition.isSupported && Keyframes.isSupported,
+    isSupported: isSupported,
     keyframe: function (keyframes) {
       return new Keyframes(keyframes);
     },
